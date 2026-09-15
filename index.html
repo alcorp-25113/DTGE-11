@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GTA-11 — Graph-To-Algorithm Vector Suite</title>
+  
+  <!-- Local Stylesheet -->
+  <link rel="stylesheet" href="./styles.css" />
+  
+  <!-- FontAwesome Icons & Google Fonts -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- Landing / Welcome Screen -->
+  <section id="landing-page" class="landing-container">
+    <div class="landing-grid-bg"></div>
+    <div class="landing-content">
+      <div class="brand-badge"><i class="fa-solid fa-atom"></i> GTA-11 ENGINE</div>
+      <h1 class="landing-title">GTA-11</h1>
+      <p class="landing-subtitle">Turn raw hand-drawn sketches into live Cartesian functions & mathematical algorithms on the fly.</p>
+      
+      <div class="landing-features">
+        <div class="feature-card">
+          <i class="fa-solid fa-wand-magic-sparkles"></i>
+          <div>
+            <h3>Auto Function Fitting</h3>
+            <p>Converts freehand drawings into Linear, Parabolic, & Parametric equations.</p>
+          </div>
+        </div>
+        <div class="feature-card">
+          <i class="fa-solid fa-image"></i>
+          <div>
+            <h3>Reference Overlay</h3>
+            <p>Upload diagrams or reference blueprints directly onto the coordinate plane.</p>
+          </div>
+        </div>
+      </div>
+
+      <button id="start-app-btn" class="glow-btn">
+        <span>Launch Cartesian Plane</span>
+        <i class="fa-solid fa-arrow-right"></i>
+      </button>
+
+      <!-- Creator Credit -->
+      <div class="creator-tag">
+        <span>Created by <strong>STUDENT25113</strong></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Application Workspace (Full Screen Cartesian Plane) -->
+  <main id="app-workspace" class="workspace-container hidden">
+    
+    <!-- Floating Collapsible Control Drawer Panel -->
+    <div class="floating-panel" id="floating-panel">
+      
+      <!-- Panel Header & Toggle Button -->
+      <div class="panel-header">
+        <div class="panel-title">
+          <span class="logo-text">GTA-11</span>
+          <span class="badge">LAYERS</span>
+        </div>
+        <button id="toggle-panel-btn" class="icon-btn" title="Toggle Equations Drawer">
+          <i class="fa-solid fa-chevron-left" id="toggle-icon"></i>
+        </button>
+      </div>
+
+      <!-- Panel Body -->
+      <div class="panel-body">
+
+        <!-- Quick Tools Bar Row 0 (Undo) -->
+        <div class="tools-bar">
+          <button id="undo-btn" class="tool-btn" title="Undo Last Action" disabled>
+            <i class="fa-solid fa-rotate-left"></i>
+            <span>Undo</span>
+          </button>
+        </div>
+
+        <!-- Quick Tools Bar Row 1 -->
+        <div class="tools-bar">
+          <label for="bg-upload" class="tool-btn" title="Upload Reference Image">
+            <i class="fa-solid fa-file-image"></i>
+            <span>Reference</span>
+          </label>
+          <input type="file" id="bg-upload" accept="image/*" hidden />
+
+          <button id="clear-all-btn" class="tool-btn danger" title="Clear All Graphs">
+            <i class="fa-solid fa-trash-arrow-up"></i>
+            <span>Clear Grid</span>
+          </button>
+        </div>
+
+        <!-- Quick Tools Bar Row 2 (Export & Copy All) -->
+        <div class="tools-bar">
+          <button id="export-img-btn" class="tool-btn action" title="Export PNG Image">
+            <i class="fa-solid fa-download"></i>
+            <span>Save Art</span>
+          </button>
+
+          <button id="copy-all-btn" class="tool-btn action" title="Copy All Equations">
+            <i class="fa-solid fa-copy"></i>
+            <span>Copy All</span>
+          </button>
+        </div>
+
+        <!-- Reference Image Controls -->
+        <div id="image-controls" class="image-controls-panel hidden">
+          <div class="control-row">
+            <span>Opacity</span>
+            <input type="range" id="bg-opacity" min="0.05" max="1" step="0.05" value="0.4" />
+          </div>
+          <button id="remove-bg-btn" class="link-btn"><i class="fa-solid fa-xmark"></i> Remove Reference</button>
+        </div>
+
+        <!-- Layers Toolbar -->
+        <div class="layers-toolbar">
+          <span class="layers-toolbar-label">Layers</span>
+          <button id="add-layer-btn" class="icon-btn" title="Add New Layer">
+            <i class="fa-solid fa-plus"></i>
+          </button>
+        </div>
+
+        <!-- Scrollable List of Layers, each with its curves grouped underneath -->
+        <div class="equations-scroll-area" id="equations-list"></div>
+
+
+        <!-- Creator Credit inside Workspace Drawer -->
+        <div class="panel-footer-credit">
+          <span>Created by <strong>STUDENT25113</strong></span>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Fullscreen Canvas -->
+    <div class="canvas-viewport" id="canvas-wrapper">
+      <canvas id="graph-canvas"></canvas>
+    </div>
+
+    <!-- Floating Bottom-Right Viewport Controls -->
+    <div class="floating-controls">
+      <button id="zoom-in" title="Zoom In"><i class="fa-solid fa-plus"></i></button>
+      <button id="zoom-out" title="Zoom Out"><i class="fa-solid fa-minus"></i></button>
+      <button id="reset-view" title="Recenter View"><i class="fa-solid fa-crosshairs"></i></button>
+      <button id="back-home-btn" title="Exit to Menu"><i class="fa-solid fa-house"></i></button>
+    </div>
+
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>

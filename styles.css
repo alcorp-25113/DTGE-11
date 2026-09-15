@@ -1,0 +1,706 @@
+:root {
+  /* Desmos Brand Color Palette */
+  --bg-dark: #ffffff;
+  --bg-grid: #f8fafc;
+  --panel-bg: rgba(255, 255, 255, 0.95);
+  --panel-border: #e2e8f0;
+  
+  /* Signature Desmos Green Accent */
+  --accent-primary: #187a3d;
+  --accent-secondary: #22a052;
+  --accent-gradient: linear-gradient(135deg, #187a3d 0%, #22a052 100%);
+  
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --danger: #dc2626;
+  
+  --font-main: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-math: 'Fira Code', monospace;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body, html {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--bg-dark);
+  color: var(--text-main);
+  font-family: var(--font-main);
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* =========================================================
+   1. LANDING PAGE STYLING (DESMOS WHITE & GREEN)
+   ========================================================= */
+.landing-container {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f8fafc;
+  z-index: 1000;
+}
+
+.landing-grid-bg {
+  position: absolute;
+  inset: 0;
+  background-image: 
+    linear-gradient(to right, rgba(0, 0, 0, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.04) 1px, transparent 1px);
+  background-size: 30px 30px;
+  pointer-events: none;
+}
+
+.landing-content {
+  position: relative;
+  max-width: 550px;
+  padding: 32px;
+  text-align: center;
+  z-index: 2;
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--panel-border);
+}
+
+.brand-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  background: rgba(24, 122, 61, 0.1);
+  border: 1px solid rgba(24, 122, 61, 0.25);
+  color: var(--accent-primary);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  margin-bottom: 20px;
+}
+
+.landing-title {
+  font-size: 3.5rem;
+  font-weight: 800;
+  letter-spacing: -2px;
+  color: var(--accent-primary);
+  margin-bottom: 12px;
+}
+
+.landing-subtitle {
+  font-size: 1rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin-bottom: 28px;
+}
+
+.landing-features {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 28px;
+  text-align: left;
+}
+
+.feature-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  background: #f8fafc;
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+}
+
+.feature-card i {
+  font-size: 1.2rem;
+  color: var(--accent-primary);
+  width: 24px;
+  text-align: center;
+}
+
+.feature-card h3 {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 2px;
+}
+
+.feature-card p {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.glow-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 14px;
+  border-radius: 10px;
+  border: none;
+  background: var(--accent-primary);
+  color: #ffffff;
+  font-size: 0.98rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(24, 122, 61, 0.3);
+  transition: all 0.2s ease;
+}
+
+.glow-btn:hover {
+  background: #136331;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(24, 122, 61, 0.4);
+}
+
+.creator-tag {
+  margin-top: 20px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  border-top: 1px dashed var(--panel-border);
+  padding-top: 14px;
+}
+
+.creator-tag strong {
+  color: var(--accent-primary);
+  letter-spacing: 0.5px;
+}
+
+/* =========================================================
+   2. MAIN WORKSPACE & CARTESIAN CANVAS
+   ========================================================= */
+.workspace-container {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background-color: #ffffff;
+}
+
+.canvas-viewport {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  inset: 0;
+  cursor: crosshair;
+}
+
+#graph-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* =========================================================
+   3. COMPACT FLOATING DRAWER
+   ========================================================= */
+.floating-panel {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  width: 280px;
+  max-height: calc(100vh - 28px);
+  background: var(--panel-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+.floating-panel.collapsed {
+  width: 44px;
+}
+
+.floating-panel.collapsed .logo-text,
+.floating-panel.collapsed .badge,
+.floating-panel.collapsed .panel-body {
+  display: none !important;
+}
+
+.floating-panel.collapsed .panel-header {
+  padding: 8px;
+  justify-content: center;
+}
+
+.floating-panel.collapsed #toggle-icon {
+  transform: rotate(180deg);
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: #ffffff;
+  border-bottom: 1px solid var(--panel-border);
+}
+
+.panel-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.logo-text {
+  font-weight: 800;
+  font-size: 1rem;
+  letter-spacing: -0.5px;
+  color: var(--accent-primary);
+}
+
+.badge {
+  font-size: 0.6rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #f1f5f9;
+  color: var(--text-muted);
+  font-weight: 700;
+}
+
+.icon-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  cursor: pointer;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.icon-btn:hover {
+  background: #f1f5f9;
+  color: var(--text-main);
+}
+
+.panel-body {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow: hidden;
+  max-height: calc(100vh - 80px);
+}
+
+.tools-bar {
+  display: flex;
+  gap: 6px;
+}
+
+.tool-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 8px;
+  background: #ffffff;
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  color: var(--text-main);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tool-btn:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.tool-btn.action {
+  color: var(--accent-primary);
+  border-color: rgba(24, 122, 61, 0.3);
+  background: rgba(24, 122, 61, 0.05);
+}
+
+.tool-btn.action:hover {
+  background: rgba(24, 122, 61, 0.12);
+}
+
+.tool-btn.danger {
+  color: var(--danger);
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.tool-btn.danger:hover {
+  background: #fee2e2;
+}
+
+.image-controls-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  background: #f8fafc;
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  font-size: 0.75rem;
+}
+
+.control-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--text-muted);
+}
+
+.control-row input[type="range"] {
+  flex: 1;
+  width: 100%;
+  accent-color: var(--accent-primary);
+  cursor: pointer;
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  color: var(--danger);
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  padding: 2px 0;
+}
+
+.equations-scroll-area {
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 280px;
+  padding-right: 16px;
+}
+
+.equations-scroll-area::-webkit-scrollbar {
+  width: 6px;
+}
+
+.equations-scroll-area::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.equations-scroll-area::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.equations-scroll-area::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.action-btn i,
+.tool-btn i,
+.icon-btn i,
+.layer-visibility-btn i,
+.layer-reorder-btn i {
+  pointer-events: none;
+}
+
+.layers-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2px;
+}
+
+.layers-toolbar-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.layer-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 6px;
+  background: #f1f5f9;
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  margin-bottom: 6px;
+}
+
+.layer-header.is-active-layer {
+  border-color: var(--accent-primary);
+  background: rgba(24, 122, 61, 0.08);
+}
+
+.layer-visibility-btn,
+.layer-reorder-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  flex-shrink: 0;
+  transition: color 0.2s, background 0.2s;
+}
+
+.layer-visibility-btn:hover,
+.layer-reorder-btn:hover {
+  background: #e2e8f0;
+  color: var(--text-main);
+}
+
+.layer-reorder-btn.danger:hover {
+  color: var(--danger);
+  background: #fee2e2;
+}
+
+.layer-reorder-btn:disabled,
+.layer-visibility-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.layer-reorder-btn:disabled:hover,
+.layer-visibility-btn:disabled:hover {
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.layer-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-main);
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.layer-count {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: #e2e8f0;
+  border-radius: 8px;
+  padding: 1px 6px;
+  flex-shrink: 0;
+}
+
+.layer-reorder {
+  display: flex;
+  gap: 0;
+  flex-shrink: 0;
+}
+
+.layer-curves-group {
+  margin: 0 0 10px 10px;
+  padding-left: 8px;
+  border-left: 2px solid var(--panel-border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.layer-empty-note {
+  margin: 0 0 10px 20px;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 20px 10px;
+  color: var(--text-muted);
+}
+
+.empty-state i {
+  font-size: 1.4rem;
+  margin-bottom: 8px;
+  color: #cbd5e1;
+}
+
+.empty-state p {
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.equation-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: #ffffff;
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.equation-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.04);
+}
+
+.equation-card.is-active {
+  border-color: var(--accent-primary);
+}
+
+.color-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.math-text {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-math);
+  font-size: 0.78rem;
+  color: var(--text-main);
+  font-weight: 600;
+  word-break: break-all;
+}
+
+.tool-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.tool-btn:disabled:hover {
+  background: #ffffff;
+  border-color: var(--panel-border);
+}
+
+.action-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.action-btn:disabled:hover {
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.card-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.layer-actions {
+  display: flex;
+  gap: 0;
+  padding-right: 4px;
+  margin-right: 2px;
+  border-right: 1px solid var(--panel-border);
+}
+
+.layer-actions .action-btn {
+  width: 18px;
+  font-size: 0.68rem;
+}
+
+.action-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  transition: color 0.2s, background 0.2s;
+}
+
+.action-btn:hover {
+  background: #f1f5f9;
+  color: var(--text-main);
+}
+
+.action-btn.delete:hover {
+  color: var(--danger);
+  background: #fef2f2;
+}
+
+.panel-footer-credit {
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px solid var(--panel-border);
+  text-align: center;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.panel-footer-credit strong {
+  color: var(--accent-primary);
+}
+
+/* =========================================================
+   4. DESMOS FLOATING NAVIGATION BUTTONS (BOTTOM RIGHT)
+   ========================================================= */
+.floating-controls {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 100;
+}
+
+.floating-controls button {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid var(--panel-border);
+  color: #475569;
+  font-size: 0.9rem;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.floating-controls button:hover {
+  background: #f8fafc;
+  color: var(--accent-primary);
+  border-color: var(--accent-primary);
+}
