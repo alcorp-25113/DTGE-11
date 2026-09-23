@@ -81,6 +81,14 @@
           </button>
         </div>
 
+        <!-- Quick Tools Bar Row 0.5 (Import Saved Equations) -->
+        <div class="tools-bar">
+          <button id="import-eqs-btn" class="tool-btn action" title="Import Previously Saved Equations">
+            <i class="fa-solid fa-file-import"></i>
+            <span>Import Equations</span>
+          </button>
+        </div>
+
         <!-- Quick Tools Bar Row 1 -->
         <div class="tools-bar">
           <label for="bg-upload" class="tool-btn" title="Upload Reference Image">
@@ -151,6 +159,32 @@
     </div>
 
   </main>
+
+  <!-- Import Saved Equations Modal -->
+  <div id="import-modal-overlay" class="import-modal-overlay hidden">
+    <div class="import-modal">
+      <div class="import-modal-header">
+        <h3><i class="fa-solid fa-file-import"></i> Import Saved Equations</h3>
+        <button id="import-modal-close" class="icon-btn" title="Close"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <p class="import-modal-hint">
+        Paste equations exported earlier from GTA-11 (Desmos-style syntax) below, one per line —
+        lines, parabolas, vertical lines, and parametric curves are all supported. They'll be added
+        as new graphs on the current layer without touching anything already on the canvas.
+      </p>
+      <textarea id="import-textarea" class="import-textarea" spellcheck="false" placeholder="y = 2.5x + 1  \left\{-4\le x\le4\right\}
+x = 3  \left\{-2\le y\le2\right\}
+( 0.26t^2-4.65t+2.2 , -1.68t^2+1.61t+14.88 )"></textarea>
+      <div id="import-feedback" class="import-feedback"></div>
+      <div class="import-modal-actions">
+        <button id="import-cancel-btn" class="tool-btn">Cancel</button>
+        <button id="import-confirm-btn" class="glow-btn import-confirm-btn">
+          <span>Import Equations</span>
+          <i class="fa-solid fa-arrow-right-to-bracket"></i>
+        </button>
+      </div>
+    </div>
+  </div>
 
   <script src="script.js"></script>
 </body>
