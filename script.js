@@ -51,6 +51,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let activeCurveId = null;
   let bgImage = null;
   let bgImageOpacity = 0.4;
+  let bgImageBaseScale = scale; // scale value at the moment the image was loaded/sized
 
   // --- LAYERS ---
   // Independent stacked sheets, each holding its own curves. New strokes
@@ -102,9 +103,53 @@ document.addEventListener("DOMContentLoaded", () => {
   undoBtn.addEventListener("click", undo);
 
   window.addEventListener("keydown", (e) => {
+    // Undo: Ctrl/Cmd + Z
     if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === "z") {
       e.preventDefault();
       undo();
+    }
+    
+    // Navigation shortcuts (only when not in text input)
+    if (e.target === document.body || e.target === canvas) {
+      // Arrow keys for panning
+      const panStep = 50;
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        originY -= panStep;
+        render();
+      } else if (e.key === "ArrowDown") {
+        e.preventDefault();
+        originY += panStep;
+        render();
+      } else if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        originX += panStep;
+        render();
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        originX -= panStep;
+        render();
+      }
+      // Plus/Equals for zoom in
+      else if (e.key === "+" || e.key === "=") {
+        e.preventDefault();
+        scale *= 1.2;
+        render();
+      }
+      // Minus for zoom out
+      else if (e.key === "-" || e.key === "_") {
+        e.preventDefault();
+        scale /= 1.2;
+        render();
+      }
+      // Zero to reset view
+      else if (e.key === "0") {
+        e.preventDefault();
+        scale = 45;
+        originX = canvas.width / 2;
+        originY = canvas.height / 2;
+        render();
+      }
     }
   });
 
@@ -169,8 +214,12 @@ document.addEventListener("DOMContentLoaded", () => {
     if (bgImage) {
       ctx.save();
       ctx.globalAlpha = bgImageOpacity;
-      const imgW = bgImage.width;
-      const imgH = bgImage.height;
+      // Scale the image relative to the zoom level it was loaded at, so it
+      // grows/shrinks in sync with the grid, curves, and axes instead of
+      // staying pinned at its natural pixel size.
+      const zoomFactor = scale / bgImageBaseScale;
+      const imgW = bgImage.width * zoomFactor;
+      const imgH = bgImage.height * zoomFactor;
       ctx.drawImage(bgImage, originX - imgW / 2, originY - imgH / 2, imgW, imgH);
       ctx.restore();
     }
@@ -309,20 +358,67 @@ document.addEventListener("DOMContentLoaded", () => {
     ctx.stroke();
   }
 
+  // --- PAN STATE ---
+  let isPanning = false;
+  let panStartX = 0;
+  let panStartY = 0;
+  let spacePressed = false;
+
+  window.addEventListener("keydown", (e) => {
+    if (e.code === "Space") {
+      spacePressed = true;
+      canvas.style.cursor = "grab";
+    }
+  });
+
+  window.addEventListener("keyup", (e) => {
+    if (e.code === "Space") {
+      spacePressed = false;
+      canvas.style.cursor = "crosshair";
+    }
+  });
+
   // --- DRAWING STROKE EVENT LISTENERS ---
   canvas.addEventListener("mousedown", (e) => {
+    // Middle mouse button OR spacebar = pan mode
+    if (e.button === 1 || spacePressed) {
+      isPanning = true;
+      panStartX = e.clientX;
+      panStartY = e.clientY;
+      canvas.style.cursor = "grabbing";
+      return;
+    }
+
+    // Left click = draw mode (normal behavior)
     isDrawing = true;
     currentStroke = [];
     addPoint(e);
   });
 
   canvas.addEventListener("mousemove", (e) => {
+    if (isPanning) {
+      const deltaX = e.clientX - panStartX;
+      const deltaY = e.clientY - panStartY;
+      originX += deltaX;
+      originY += deltaY;
+      panStartX = e.clientX;
+      panStartY = e.clientY;
+      render();
+      return;
+    }
+
     if (!isDrawing) return;
     addPoint(e);
     render();
   });
 
   canvas.addEventListener("mouseup", () => {
+    if (isPanning) {
+      isPanning = false;
+      canvas.style.cursor = spacePressed ? "grab" : "crosshair";
+      return;
+    }
+
     if (!isDrawing) return;
     isDrawing = false;
     processStroke(currentStroke);
@@ -347,9 +443,33 @@ document.addEventListener("DOMContentLoaded", () => {
   // into other graphing software, while trimming needless trailing zeros.
   function fmtCoef(n) {
     if (!isFinite(n)) return "0";
+
+    // Values this close to zero are floating-point noise from the fit, not
+    // a real coefficient - and there's no safe way to print them anyway
+    // (see the "e" note below), so just call them zero.
+    if (Math.abs(n) < 1e-9) return "0";
+
     // 6 significant figures preserves shape fidelity for typical sketch
     // ranges without producing absurdly long strings.
     let s = n.toPrecision(6);
+
+    // CRITICAL: toPrecision falls back to exponential notation ("e-14",
+    // "e+21", etc.) for very small/large magnitudes. Desmos's parser does
+    // NOT treat "e" as "times ten to the power of" - it reads a bare "e" as
+    // Euler's number and implicitly multiplies, so "2.79102e-14" would be
+    // silently evaluated as 2.79102 * e * (-14) (~ -106) instead of ~0.
+    // That's a wrong-graph bug, not just a paste error, so this string must
+    // never reach the equation text - convert to plain fixed-point instead.
+    if (s.includes("e") || s.includes("E")) {
+      const num = Number(s);
+      const magnitude = num === 0 ? 0 : Math.floor(Math.log10(Math.abs(num)));
+      const decimals = Math.max(0, Math.min(100, 5 - magnitude));
+      // toFixed() itself silently reverts to exponential notation for
+      // |num| >= 1e21 (a documented JS quirk) - toLocaleString doesn't
+      // have that ceiling, so it's used here instead for safety.
+      s = num.toLocaleString("en-US", { useGrouping: false, maximumFractionDigits: decimals });
+    }
+
     if (s.includes(".")) {
       s = s.replace(/0+$/, "").replace(/\.$/, "");
     }
@@ -385,7 +505,15 @@ document.addEventListener("DOMContentLoaded", () => {
         highlightColor: chosenHighlightColor,
         xVal: avgX,
         domain: { min: minY, max: maxY },
-        equationText: `x = ${fmtCoef(avgX)}  {${fmtCoef(minY)} ≤ y ≤ ${fmtCoef(maxY)}}`
+        // NOTE ON THE DOMAIN BRACKETS: a plain "{...}" only creates a real
+        // Desmos domain restriction when a person TYPES the "{" character -
+        // Desmos's keyboard handler intercepts that keystroke specially.
+        // A literal "{" that arrives via paste is parsed as bare LaTeX,
+        // where curly braces are just an invisible grouping construct, so
+        // "{-1 <= x <= 1}" would silently paste as the ungrouped, broken
+        // text "-1 <= x <= 1" tacked onto the equation. The actual pasteable
+        // syntax (confirmed by a Desmos engineer) is "\left\{...\right\}".
+        equationText: `x = ${fmtCoef(avgX)}  \\left\\{${fmtCoef(minY)}\\le y\\le${fmtCoef(maxY)}\\right\\}`
       });
       updateEquationsUI();
       return;
@@ -402,7 +530,7 @@ document.addEventListener("DOMContentLoaded", () => {
         m: lineFit.m,
         b: lineFit.b,
         domain: { min: minX, max: maxX },
-        equationText: `y = ${fmtCoef(lineFit.m)}x ${lineFit.b >= 0 ? '+' : '-'} ${fmtCoef(Math.abs(lineFit.b))}  {${fmtCoef(minX)} ≤ x ≤ ${fmtCoef(maxX)}}`
+        equationText: `y = ${fmtCoef(lineFit.m)}x ${lineFit.b >= 0 ? '+' : '-'} ${fmtCoef(Math.abs(lineFit.b))}  \\left\\{${fmtCoef(minX)}\\le x\\le${fmtCoef(maxX)}\\right\\}`
       });
       updateEquationsUI();
       return;
@@ -422,7 +550,7 @@ document.addEventListener("DOMContentLoaded", () => {
         b: quadFit.b,
         c: quadFit.c,
         domain: { min: minX, max: maxX },
-        equationText: `y = ${fmtCoef(quadFit.a)}x² ${signB} ${fmtCoef(Math.abs(quadFit.b))}x ${signC} ${fmtCoef(Math.abs(quadFit.c))}  {${fmtCoef(minX)} ≤ x ≤ ${fmtCoef(maxX)}}`
+        equationText: `y = ${fmtCoef(quadFit.a)}x^2 ${signB} ${fmtCoef(Math.abs(quadFit.b))}x ${signC} ${fmtCoef(Math.abs(quadFit.c))}  \\left\\{${fmtCoef(minX)}\\le x\\le${fmtCoef(maxX)}\\right\\}`
       });
       updateEquationsUI();
       return;
@@ -437,7 +565,7 @@ document.addEventListener("DOMContentLoaded", () => {
       highlightColor: chosenHighlightColor,
       ax: paramFit.ax, bx: paramFit.bx, cx: paramFit.cx,
       ay: paramFit.ay, by: paramFit.by, cy: paramFit.cy,
-      equationText: `( ${fmtCoef(paramFit.ax)}t²${paramFit.bx>=0?'+':''}${fmtCoef(paramFit.bx)}t${paramFit.cx>=0?'+':''}${fmtCoef(paramFit.cx)} , ${fmtCoef(paramFit.ay)}t²${paramFit.by>=0?'+':''}${fmtCoef(paramFit.by)}t${paramFit.cy>=0?'+':''}${fmtCoef(paramFit.cy)} )`
+      equationText: `( ${fmtCoef(paramFit.ax)}t^2${paramFit.bx>=0?'+':''}${fmtCoef(paramFit.bx)}t${paramFit.cx>=0?'+':''}${fmtCoef(paramFit.cx)} , ${fmtCoef(paramFit.ay)}t^2${paramFit.by>=0?'+':''}${fmtCoef(paramFit.by)}t${paramFit.cy>=0?'+':''}${fmtCoef(paramFit.cy)} )`
     });
     updateEquationsUI();
   }
@@ -780,8 +908,11 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
+    // IMPORTANT: no numbering/prefixes here. Desmos's expression list treats
+    // each pasted line as its own standalone expression, so a leading
+    // "1. " would get parsed as part of the equation and break every line.
     const allEquationsText = curves
-      .map((c, idx) => `${idx + 1}. ${c.equationText}`)
+      .map(c => c.equationText)
       .join("\n");
 
     navigator.clipboard.writeText(allEquationsText).then(() => {
@@ -803,6 +934,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const img = new Image();
       img.onload = () => {
         bgImage = img;
+        bgImageBaseScale = scale;
         imageControls.classList.remove("hidden");
         render();
       };
