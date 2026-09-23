@@ -23,6 +23,15 @@ document.addEventListener("DOMContentLoaded", () => {
   const clearAllBtn = document.getElementById("clear-all-btn");
   const undoBtn = document.getElementById("undo-btn");
   const addLayerBtn = document.getElementById("add-layer-btn");
+
+  // Import Saved Equations Elements
+  const importEqsBtn = document.getElementById("import-eqs-btn");
+  const importModalOverlay = document.getElementById("import-modal-overlay");
+  const importModalClose = document.getElementById("import-modal-close");
+  const importCancelBtn = document.getElementById("import-cancel-btn");
+  const importConfirmBtn = document.getElementById("import-confirm-btn");
+  const importTextarea = document.getElementById("import-textarea");
+  const importFeedback = document.getElementById("import-feedback");
   
   // Export & Copy All Controls
   const exportImgBtn = document.getElementById("export-img-btn");
@@ -103,6 +112,11 @@ document.addEventListener("DOMContentLoaded", () => {
   undoBtn.addEventListener("click", undo);
 
   window.addEventListener("keydown", (e) => {
+    // Skip all canvas/undo shortcuts while typing in a text field (e.g. the
+    // Import Equations textarea) so normal editing keys aren't hijacked.
+    const tag = e.target.tagName;
+    if (tag === "TEXTAREA" || tag === "INPUT") return;
+
     // Undo: Ctrl/Cmd + Z
     if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === "z") {
       e.preventDefault();
@@ -922,6 +936,209 @@ document.addEventListener("DOMContentLoaded", () => {
         copyAllBtn.querySelector("span").textContent = originalText;
       }, 2000);
     });
+  });
+
+  // --- IMPORT SAVED EQUATIONS ---
+  // Lets a person paste equation text previously copied out of GTA-11 (via
+  // "Copy Text" or "Copy All", in the exact pasteable-Desmos syntax the app
+  // generates) and rebuild real curve objects from it, so a saved graph can
+  // be continued later. This is purely the reverse direction of the existing
+  // equationText generation in processStroke() below - it does not touch the
+  // sketch-fitting/rendering pipeline at all, it only ever pushes onto the
+  // same `curves` array those functions already read from.
+
+  // Parses "A t^2 + B t + C" (or the x/y equivalent) into {a, b, c}. Tolerant
+  // of a missing leading sign on the first term and of an implicit ±1
+  // coefficient (e.g. "-t^2"), even though GTA-11's own output always
+  // includes an explicit numeric coefficient.
+  function parseQuadCoeffs(exprRaw) {
+    const expr = exprRaw.replace(/\s+/g, "");
+    let a = 0, b = 0, c = 0;
+    const terms = expr.match(/[+-]?[^+-]+/g) || [];
+    terms.forEach(term => {
+      if (!term) return;
+      if (term.endsWith("t^2")) {
+        a = coefVal(term.slice(0, -3));
+      } else if (term.endsWith("t")) {
+        b = coefVal(term.slice(0, -1));
+      } else {
+        c = coefVal(term);
+      }
+    });
+    return { a, b, c };
+  }
+
+  // Resolves a coefficient string that may be bare "+"/"-" (implicit 1) or a
+  // genuine number.
+  function coefVal(s) {
+    if (s === "" || s === "+") return 1;
+    if (s === "-") return -1;
+    const n = parseFloat(s);
+    return isFinite(n) ? n : 0;
+  }
+
+  // Parses a single line of pasted equation text into a curve-data object
+  // (missing only id/layerId/highlightColor, which the caller fills in).
+  // Returns null if the line doesn't match any known GTA-11/Desmos format.
+  function parseSingleEquation(rawLine) {
+    // Desmos's pasteable domain-restriction syntax relies on literal
+    // backslashes ("\left\{...\right\}", "\le"). Stripping every backslash
+    // up front turns that into plain "left{...le...le...right}" text, which
+    // is far simpler and safer to match than re-escaping backslashes inside
+    // a JS regex literal.
+    const clean = rawLine.replace(/\\/g, "").trim();
+    if (!clean) return null;
+
+    let domainMin = null;
+    let domainMax = null;
+    let body = clean;
+
+    const domainMatch = clean.match(/left\{(-?[\d.]+)\s*le\s*[xy]\s*le\s*(-?[\d.]+)\s*right\}/i);
+    if (domainMatch) {
+      domainMin = parseFloat(domainMatch[1]);
+      domainMax = parseFloat(domainMatch[2]);
+      body = clean.slice(0, domainMatch.index).trim();
+    }
+
+    // Parametric: ( x(t) , y(t) )
+    if (body.startsWith("(")) {
+      const pm = body.match(/^\(\s*(.+?)\s*,\s*(.+?)\s*\)\s*$/);
+      if (!pm) return null;
+      const xCoef = parseQuadCoeffs(pm[1]);
+      const yCoef = parseQuadCoeffs(pm[2]);
+      return {
+        type: "parametric",
+        ax: xCoef.a, bx: xCoef.b, cx: xCoef.c,
+        ay: yCoef.a, by: yCoef.b, cy: yCoef.c,
+        equationText: rawLine.trim()
+      };
+    }
+
+    // Vertical line: x = VAL
+    let m = body.match(/^x\s*=\s*(-?[\d.]+)\s*$/i);
+    if (m) {
+      return {
+        type: "vertical_line",
+        xVal: parseFloat(m[1]),
+        domain: { min: domainMin !== null ? domainMin : -10, max: domainMax !== null ? domainMax : 10 },
+        equationText: rawLine.trim()
+      };
+    }
+
+    // Parabola: y = A x^2 (+/-) B x (+/-) C
+    m = body.match(/^y\s*=\s*(-?[\d.]+)x\^2\s*([+-])\s*([\d.]+)x\s*([+-])\s*([\d.]+)\s*$/i);
+    if (m) {
+      return {
+        type: "parabola",
+        a: parseFloat(m[1]),
+        b: (m[2] === "+" ? 1 : -1) * parseFloat(m[3]),
+        c: (m[4] === "+" ? 1 : -1) * parseFloat(m[5]),
+        domain: { min: domainMin !== null ? domainMin : -10, max: domainMax !== null ? domainMax : 10 },
+        equationText: rawLine.trim()
+      };
+    }
+
+    // Line: y = M x (+/-) B
+    m = body.match(/^y\s*=\s*(-?[\d.]+)x\s*([+-])\s*([\d.]+)\s*$/i);
+    if (m) {
+      return {
+        type: "line",
+        m: parseFloat(m[1]),
+        b: (m[2] === "+" ? 1 : -1) * parseFloat(m[3]),
+        domain: { min: domainMin !== null ? domainMin : -10, max: domainMax !== null ? domainMax : 10 },
+        equationText: rawLine.trim()
+      };
+    }
+
+    return null;
+  }
+
+  function openImportModal() {
+    importTextarea.value = "";
+    importFeedback.textContent = "";
+    importFeedback.className = "import-feedback";
+    importModalOverlay.classList.remove("hidden");
+    importTextarea.focus();
+  }
+
+  function closeImportModal() {
+    importModalOverlay.classList.add("hidden");
+  }
+
+  importEqsBtn.addEventListener("click", openImportModal);
+  importModalClose.addEventListener("click", closeImportModal);
+  importCancelBtn.addEventListener("click", closeImportModal);
+
+  // Click on the dimmed backdrop (not the card itself) closes the modal.
+  importModalOverlay.addEventListener("click", (e) => {
+    if (e.target === importModalOverlay) closeImportModal();
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !importModalOverlay.classList.contains("hidden")) {
+      closeImportModal();
+    }
+  });
+
+  importConfirmBtn.addEventListener("click", () => {
+    const rawLines = importTextarea.value.split("\n").map(l => l.trim()).filter(l => l.length > 0);
+
+    if (rawLines.length === 0) {
+      importFeedback.textContent = "Paste at least one saved equation line first.";
+      importFeedback.className = "import-feedback error";
+      return;
+    }
+
+    const parsedCurves = [];
+    let failedCount = 0;
+
+    rawLines.forEach(line => {
+      const parsed = parseSingleEquation(line);
+      if (parsed) {
+        parsedCurves.push(parsed);
+      } else {
+        failedCount++;
+      }
+    });
+
+    if (parsedCurves.length === 0) {
+      importFeedback.textContent = `Couldn't recognize ${failedCount === 1 ? "that line" : "any of those lines"}. Make sure it's pasted exactly as GTA-11 exported it.`;
+      importFeedback.className = "import-feedback error";
+      return;
+    }
+
+    pushHistory();
+
+    // Importing onto a hidden layer would silently vanish, same safeguard
+    // used when drawing a fresh stroke.
+    const targetLayer = layers.find(l => l.id === activeLayerId);
+    if (targetLayer && !targetLayer.visible) targetLayer.visible = true;
+
+    parsedCurves.forEach(data => {
+      const highlightColor = highlightColors[colorIndex % highlightColors.length];
+      colorIndex++;
+      curves.push({
+        id: nextCurveId(),
+        layerId: activeLayerId,
+        highlightColor,
+        ...data
+      });
+    });
+
+    updateEquationsUI();
+    render();
+
+    const successMsg = `Imported ${parsedCurves.length} equation${parsedCurves.length === 1 ? "" : "s"}.` +
+      (failedCount > 0 ? ` Skipped ${failedCount} unrecognized line${failedCount === 1 ? "" : "s"}.` : "");
+    importFeedback.textContent = successMsg;
+    importFeedback.className = "import-feedback success";
+
+    // Only auto-close when everything imported cleanly - if some lines were
+    // skipped, keep the modal open so the person can see the count and fix
+    // or remove the offending lines before trying again.
+    if (failedCount === 0) {
+      setTimeout(closeImportModal, 1100);
+    }
   });
 
   // --- BACKGROUND REFERENCE CONTROLS ---
